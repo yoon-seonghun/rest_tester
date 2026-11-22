@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key><string>RestTester</string>
+  <key>CFBundleDisplayName</key><string>REST API 테스트 도구</string>
+  <key>CFBundleIdentifier</key><string>local.resttester</string>
+  <key>CFBundleExecutable</key><string>RestTester</string>
+  <key>CFBundleIconFile</key><string>RestTester</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleVersion</key><string>@VER@</string>
+  <key>CFBundleShortVersionString</key><string>@VER@</string>
+  <key>LSMinimumSystemVersion</key><string>11.0</string>
+  <!-- Dock 아이콘 없이 백그라운드로 실행 (화면은 브라우저, 종료는 화면의 [종료] 버튼) -->
+  <key>LSUIElement</key><true/>
+</dict>
+</plist>

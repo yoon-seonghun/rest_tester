@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>REST API 테스트 도구</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --bg:#f4f5f7; --panel:#fff; --line:#e1e4e8; --text:#1f2328; --sub:#656d76;
+  --accent:#2563eb; --accent-d:#1d4ed8; --ok:#15803d; --warn:#b45309; --err:#b91c1c;
+  --get:#15803d; --post:#b45309; --put:#1d4ed8; --patch:#7c3aed; --del:#b91c1c;
+  --mono: Consolas, "D2Coding", "Courier New", monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:"Malgun Gothic","맑은 고딕",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;display:flex;flex-direction:column}
+button{font:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#111827;color:#fff}
+header h1{font-size:16px;margin:0;font-weight:600}
+header .sp{flex:1}
+header select,header button{background:#1f2937;color:#fff;border:1px solid #374151;border-radius:6px;padding:5px 10px}
+header button:hover{background:#374151}
+.wrap{flex:1;display:flex;min-height:0}
+aside{width:270px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.stabs{display:flex;border-bottom:1px solid var(--line)}
+.stabs button{flex:1;border:0;background:none;padding:10px;color:var(--sub);border-bottom:2px solid transparent}
+.stabs button.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.slist{flex:1;overflow:auto;padding:6px}
+.sitem{display:flex;align-items:center;gap:8px;padding:7px 8px 7px 6px;border-radius:6px;cursor:pointer;border-left:3px solid transparent}
+.sitem:hover{background:#f3f4f6}
+.sitem.sel{background:#e0e9fd;border-left-color:var(--accent)}
+.sitem.sel:hover{background:#d4e1fc}
+.sitem.sel .nm{font-weight:600;color:#1e3a8a}
+.sitem .dirty{color:var(--warn);font-size:11px;font-weight:600;white-space:nowrap}
+.sitem .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sitem .tm{font-size:11px;color:var(--sub)}
+.sitem .x{visibility:hidden;border:0;background:none;color:var(--sub);padding:0 4px}
+.sitem:hover .x{visibility:visible}
+.sitem .x:hover{color:var(--err)}
+.folder{font-size:12px;color:var(--sub);padding:8px 8px 2px;font-weight:600}
+.empty{color:var(--sub);text-align:center;padding:30px 10px;font-size:13px;line-height:1.6}
+.mb{font-family:var(--mono);font-size:11px;font-weight:700;min-width:44px}
+.m-GET{color:var(--get)}.m-POST{color:var(--post)}.m-PUT{color:var(--put)}.m-PATCH{color:var(--patch)}.m-DELETE{color:var(--del)}.m-HEAD,.m-OPTIONS{color:var(--sub)}
+main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0;padding:14px;gap:12px}
+.bar{display:flex;gap:8px}
+.bar select{width:110px;border:1px solid var(--line);border-radius:8px;padding:0 10px;font-weight:700;font-family:var(--mono);background:#fff}
+.bar input{flex:1;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-family:var(--mono);background:#fff;min-width:0}
+.bar input:focus,.bar select:focus{outline:2px solid #bfdbfe;border-color:var(--accent)}
+.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px}
+.btn:hover{background:#f6f8fa}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;padding:8px 22px}
+.btn.pri:hover{background:var(--accent-d)}
+.btn.pri:disabled{opacity:.6;cursor:wait}
+.btn.sm{padding:4px 10px;font-size:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;align-items:center}
+.tabs button{border:0;background:none;padding:10px 12px;color:var(--sub);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs button.on{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+.tabs .cnt{display:inline-block;background:#e8eefc;color:var(--accent);border-radius:9px;font-size:11px;padding:0 6px;margin-left:4px}
+.tabs .sp{flex:1}
+.tabs button,.tabtools button{white-space:nowrap}
+#resTabs{flex-wrap:wrap;row-gap:2px}
+.status{flex-wrap:wrap;row-gap:2px;justify-content:flex-end}
+.status span{white-space:nowrap}
+.pane{padding:12px;overflow:auto;display:none;min-height:0}
+.pane.on{display:block}
+.req{flex:0 0 auto;max-height:45%}
+.req .pane{max-height:calc(45vh - 90px)}
+.res{flex:1}
+table.kv{width:100%;border-collapse:collapse}
+table.kv td{padding:3px 4px}
+table.kv input[type=text]{width:100%;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-family:var(--mono);font-size:13px}
+table.kv td.c{width:28px;text-align:center}
+table.kv td.d{width:30px}
+table.kv .del{border:0;background:none;color:var(--sub);font-size:16px}
+table.kv .del:hover{color:var(--err)}
+.hint{color:var(--sub);font-size:12px;margin:6px 2px;line-height:1.5}
+.row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.row label{display:flex;align-items:center;gap:6px}
+textarea.code{width:100%;min-height:160px;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:var(--mono);font-size:13px;resize:vertical;tab-size:2}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;max-width:480px}
+.field input,.field select{border:1px solid var(--line);border-radius:6px;padding:7px 9px}
+.status{display:flex;gap:16px;align-items:center;padding:0 12px;font-size:13px}
+.status b{font-family:var(--mono)}
+.status .ts{color:var(--sub)}.status .ts b{color:var(--text);font-weight:500}
+.s2{color:var(--ok)}.s3{color:var(--accent)}.s4{color:var(--warn)}.s5,.serr{color:var(--err)}
+pre.out{margin:0;font-family:var(--mono);font-size:13px;white-space:pre-wrap;word-break:break-all;line-height:1.5}
+.j-k{color:#0550ae}.j-s{color:#0a3069}.j-n{color:#953800}.j-b{color:#8250df}.j-z{color:#6e7781}
+.errbox{background:#fef2f2;border:1px solid #fecaca;color:#7f1d1d;border-radius:8px;padding:14px;white-space:pre-wrap;line-height:1.6}
+.placeholder{color:var(--sub);text-align:center;padding:50px 20px;line-height:1.8}
+.placeholder .big{font-size:34px;opacity:.4}
+table.hd{border-collapse:collapse;width:100%;font-size:13px}
+table.hd td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top;font-family:var(--mono);word-break:break-all}
+table.hd td:first-child{color:var(--sub);width:30%;white-space:nowrap}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:10}
+.modal-bg.on{display:flex}
+.modal{background:#fff;border-radius:12px;width:min(640px,92vw);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.modal h3{margin:0;padding:14px 18px;border-bottom:1px solid var(--line);font-size:15px}
+.modal .body{padding:14px 18px;overflow:auto}
+.modal .foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:9px 18px;border-radius:8px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:20}
+.toast.on{opacity:.95}
+.tabtools{display:flex;gap:6px;margin-left:auto}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.sbar{position:sticky;top:-12px;margin:-12px -12px 10px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line);display:flex;gap:6px;align-items:center;z-index:3}
+.sbar input{border:1px solid var(--line);border-radius:6px;padding:5px 9px;width:280px;font-family:var(--mono);font-size:13px}
+.sbar input:focus{outline:2px solid #bfdbfe;border-color:var(--accent)}
+.sbar .scnt{color:var(--sub);font-size:12px;min-width:64px;font-family:var(--mono)}
+::highlight(rt-p-rbody),::highlight(rt-p-rreq){background:#fde68a;color:inherit}
+::highlight(rt-cur){background:#f97316;color:#fff}
+.res-pop{position:fixed;inset:0;background:rgba(15,23,42,.72);display:none;z-index:12;padding:20px;flex-direction:column;gap:8px}
+.res-pop.on{display:flex}
+.res-pop-head{color:#fff;font-family:var(--mono);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:6px 12px;background:#111827;border-radius:6px;align-self:flex-start;max-width:100%}
+.res-pop-in{flex:1;display:flex;min-height:0}
+.res-pop .card.res{flex:1;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.res-pop .tv-wrap{max-height:calc(100vh - 230px)}
+
+.tv-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;font-size:13px}
+.tv-bar input[type=search]{border:1px solid var(--line);border-radius:6px;padding:5px 9px;width:200px}
+.tv-bar select{border:1px solid var(--line);border-radius:6px;padding:4px 6px;max-width:260px}
+.tv-bar label{display:flex;align-items:center;gap:4px;color:var(--sub)}
+.tv-cnt{color:var(--sub);margin-left:auto}
+.tv-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px;max-height:calc(100vh - 330px);min-height:120px}
+table.grid{border-collapse:collapse;font-size:12.5px;min-width:100%}
+table.grid th,table.grid td{border-bottom:1px solid var(--line);border-right:1px solid #f0f2f4;padding:5px 8px;white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;text-align:left}
+table.grid th{position:sticky;top:0;background:#f6f8fa;font-weight:600;cursor:pointer;user-select:none;z-index:1}
+table.grid th:hover{background:#eaeef2}
+table.grid th.rn,table.grid td.rn{color:var(--sub);text-align:right;width:1%;background:#fafbfc;position:sticky;left:0}
+table.grid th.rn{z-index:2}
+table.grid tr:nth-child(even) td{background:#fbfcfd}
+table.grid tr:hover td{background:#eef4ff}
+table.grid td.num{text-align:right;font-family:var(--mono)}
+table.grid td.nul{color:#b0b7c0}
+table.grid td.obj{color:#8250df;cursor:pointer}
+table.grid td{cursor:copy}
+.kvgrid td:first-child{font-weight:600;color:#0550ae;width:30%}
+.kvgrid td.num{text-align:left}
+.colpop{position:fixed;background:#fff;border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.15);padding:8px;max-height:60vh;overflow:auto;z-index:15;font-size:13px;min-width:220px}
+.colpop label{display:flex;gap:6px;padding:3px 4px;border-radius:4px;cursor:pointer}
+.colpop label:hover{background:#f0f3f7}
+.crumb{font-size:12px;color:var(--sub);margin-bottom:6px}
+.crumb a{color:var(--accent);cursor:pointer;text-decoration:underline}
+
+</style>
+</head>
+<body>
+<header>
+  <h1>🔌 REST API 테스트 도구</h1>
+  <span class="sp"></span>
+  <span style="font-size:12px;color:#9ca3af">환경</span>
+  <select id="envSel" title="변수 묶음 선택"></select>
+  <button id="envBtn">변수 관리</button>
+  <button id="helpBtn">사용법</button>
+  <button id="quitBtn" title="프로그램을 완전히 종료합니다">종료</button>
+</header>
+<div class="wrap">
+  <aside>
+    <div class="stabs">
+      <button data-s="saved" class="on">저장된 요청</button>
+      <button data-s="hist">최근 기록</button>
+    </div>
+    <div class="slist" id="slist"></div>
+    <div style="padding:8px;border-top:1px solid var(--line);display:flex;gap:6px">
+      <button class="btn sm" id="newBtn" style="flex:1">+ 새 요청</button>
+      <button class="btn sm" id="expBtn" title="저장된 요청을 파일로 내보내기">내보내기</button>
+      <button class="btn sm" id="impBtn" title="파일에서 불러오기">불러오기</button>
+      <input type="file" id="impFile" accept=".json" hidden>
+    </div>
+  </aside>
+  <main>
+    <div class="bar">
+      <select id="method">
+        <option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option><option>OPTIONS</option>
+      </select>
+      <input id="url" placeholder="주소 입력 예) http://10.0.0.10:8080/api/items  또는  {{baseUrl}}/api/items" spellcheck="false">
+      <button class="btn pri" id="sendBtn">보내기</button>
+      <button class="btn" id="saveBtn">저장</button>
+    </div>
+
+    <div class="card req">
+      <div class="tabs" id="reqTabs">
+        <button data-p="params" class="on">파라미터<span class="cnt" id="cParams"></span></button>
+        <button data-p="headers">헤더<span class="cnt" id="cHeaders"></span></button>
+        <button data-p="body">본문(Body)</button>
+        <button data-p="auth">인증</button>
+        <button data-p="opts">설정</button>
+      </div>
+      <div class="pane on" id="p-params">
+        <table class="kv" id="paramsT"></table>
+        <div class="hint">주소 뒤에 붙는 <b>?이름=값</b> 항목입니다. 주소창에 직접 입력해도 자동으로 여기에 반영됩니다.</div>
+      </div>
+      <div class="pane" id="p-headers">
+        <table class="kv" id="headersT"></table>
+        <div class="hint">예) <code>Content-Type</code> / <code>application/json</code>. 본문 형식을 고르면 Content-Type은 자동으로 붙습니다.</div>
+      </div>
+      <div class="pane" id="p-body">
+        <div class="row">
+          <label><input type="radio" name="bt" value="none" checked> 없음</label>
+          <label><input type="radio" name="bt" value="json"> JSON</label>
+          <label><input type="radio" name="bt" value="form"> 폼(x-www-form-urlencoded)</label>
+          <label><input type="radio" name="bt" value="text"> 일반 텍스트/XML</label>
+          <span style="flex:1"></span>
+          <button class="btn sm" id="fmtBtn">JSON 정렬</button>
+        </div>
+        <div id="bodyRaw"><textarea class="code" id="bodyText" spellcheck="false" placeholder='{ "itemCode": "A001", "qty": 10 }'></textarea></div>
+        <div id="bodyForm" style="display:none"><table class="kv" id="formT"></table></div>
+        <div id="bodyNone" class="hint">본문 없이 보냅니다. 주로 GET 조회에 사용합니다.</div>
+      </div>
+      <div class="pane" id="p-auth">
+        <div class="field"><span>인증 방식</span>
+          <select id="authType">
+            <option value="none">없음</option>
+            <option value="bearer">토큰 (Bearer Token)</option>
+            <option value="basic">아이디/비밀번호 (Basic)</option>
+            <option value="apikey">API 키</option>
+          </select>
+        </div>
+        <div id="authBearer" class="field" style="display:none"><span>토큰</span><input id="authToken" placeholder="eyJhbGci... 또는 {{token}}"></div>
+        <div id="authBasic" style="display:none">
+          <div class="field"><span>아이디</span><input id="authUser"></div>
+          <div class="field"><span>비밀번호</span><input id="authPass" type="password"></div>
+        </div>
+        <div id="authKey" style="display:none">
+          <div class="field"><span>키를 넣을 위치</span>
+            <select id="authKeyIn"><option value="query">주소 뒤 (?apiKey=…)</option><option value="header">헤더</option></select>
+          </div>
+          <div class="field"><span>이름</span><input id="authKeyName" placeholder="비우면 apiKey"></div>
+          <div class="field"><span>키 값</span><input id="authKeyVal"></div>
+        </div>
+      </div>
+      <div class="pane" id="p-opts">
+        <div class="row"><label><input type="checkbox" id="optInsecure"> 인증서 오류 무시 (사내 https 서버에서 인증서 경고가 날 때)</label></div>
+        <div class="row"><label><input type="checkbox" id="optCookie" checked> 세션(쿠키) 유지 — 서버가 준 로그인 쿠키(JSESSIONID 등)를 다음 요청에 자동으로 붙입니다</label>
+          <button class="btn sm" id="cookieClr">쿠키 초기화</button><span class="hint" id="cookieInfo"></span></div>
+        <div class="row"><label>응답 대기 시간 <input type="number" id="optTimeout" value="30" min="1" max="600" style="width:70px;border:1px solid var(--line);border-radius:6px;padding:4px 6px"> 초</label></div>
+      </div>
+    </div>
+
+    <div class="card res">
+      <div class="tabs" id="resTabs">
+        <button data-p="rtable" class="on">표 보기</button>
+        <button data-p="rbody">원문</button>
+        <button data-p="rreq">보낸 요청</button>
+        <button data-p="rheaders">응답 헤더<span class="cnt" id="cRh"></span></button>
+        <span class="sp"></span>
+        <div class="status" id="status"></div>
+        <div class="tabtools">
+          <button class="btn sm" id="popBtn" title="결과 영역을 크게 봅니다 (Esc로 닫기)">⛶ 크게 보기</button>
+          <button class="btn sm" id="copyRes">결과 복사</button>
+          <button class="btn sm" id="copyCurl" title="개발자에게 전달할 때 유용합니다">curl 복사</button>
+        </div>
+      </div>
+      <div class="pane on" id="p-rtable"><div class="placeholder">응답이 오면 여기에 표로 정리해 보여줍니다.</div></div>
+      <div class="pane" id="p-rbody"><div class="placeholder"><div class="big">📡</div>주소를 입력하고 <b>보내기</b>(Ctrl+Enter / Mac은 ⌘+Enter)를 누르면<br>여기에 서버 응답이 표시됩니다.</div></div>
+      <div class="pane" id="p-rheaders"></div>
+      <div class="pane" id="p-rreq"><div class="placeholder">요청을 보내면 서버로 실제 전송된 요청 원문이 여기에 표시됩니다.</div></div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-bg" id="envModal"><div class="modal">
+  <h3>변수 관리</h3>
+  <div class="body">
+    <div class="hint" style="margin-top:0">자주 쓰는 서버 주소·토큰 등을 변수로 등록하고 <code>{{변수이름}}</code> 으로 사용하세요.<br>예) 운영/테스트 환경을 만들어 <code>baseUrl</code> 값만 다르게 두면, 상단에서 환경만 바꿔 같은 요청을 보낼 수 있습니다.</div>
+    <div class="row">
+      <select id="envEditSel" style="border:1px solid var(--line);border-radius:6px;padding:6px"></select>
+      <button class="btn sm" id="envAdd">+ 환경 추가</button>
+      <button class="btn sm" id="envRen">이름 변경</button>
+      <button class="btn sm" id="envDel">삭제</button>
+    </div>
+    <table class="kv" id="envT"></table>
+  </div>
+  <div class="foot"><button class="btn pri" id="envClose">닫기</button></div>
+</div></div>
+
+<div class="modal-bg" id="saveModal"><div class="modal">
+  <h3>요청 저장</h3>
+  <div class="body">
+    <div class="field"><span>이름</span><input id="saveName" placeholder="예) 품목 조회"></div>
+    <div class="field"><span>폴더 (선택)</span><input id="saveFolder" placeholder="예) 생산실적" list="folderList"><datalist id="folderList"></datalist></div>
+    <div class="hint" id="saveHint"></div>
+  </div>
+  <div class="foot">
+    <button class="btn" id="saveCancel">취소</button>
+    <button class="btn" id="saveAsNew" style="display:none">새로 저장</button>
+    <button class="btn pri" id="saveOk">저장</button>
+  </div>
+</div></div>
+
+<div class="modal-bg" id="helpModal"><div class="modal">
+  <h3>사용법</h3>
+  <div class="body" style="line-height:1.8">
+    <b>1. 기본</b><br>
+    · 방식(GET/POST 등)을 고르고 주소를 입력한 뒤 <b>보내기</b>를 누릅니다. (단축키 Ctrl+Enter)<br>
+    · 결과 숫자가 <span class="s2"><b>200번대</b></span>면 성공, <span class="s4"><b>400번대</b></span>는 요청 내용 문제, <span class="s5"><b>500번대</b></span>는 서버 쪽 오류입니다.<br><br>
+    <b>2. 데이터 보내기</b><br>
+    · 등록/수정(POST, PUT)은 <b>본문(Body)</b> 탭에서 JSON을 고르고 내용을 입력합니다.<br><br>
+    <b>3. 저장과 재사용</b><br>
+    · <b>저장</b>을 누르면 왼쪽 목록에 남아 다음에 클릭 한 번으로 다시 불러옵니다. (Ctrl+S)<br>
+    · 보낸 요청은 <b>최근 기록</b>에 자동으로 100개까지 남습니다.<br>
+    · 저장 내용은 <code>RestTester_data.json</code> 파일에 보관됩니다. (위치는 아래 5번 참고)<br>
+    · <b>내보내기/불러오기</b>로 동료와 요청 목록을 주고받을 수 있습니다.<br><br>
+    <b>4. 변수</b><br>
+    · <b>변수 관리</b>에서 <code>baseUrl</code> 같은 값을 등록하고 <code>{{baseUrl}}/api/...</code> 처럼 씁니다.<br><br>
+    <b>5. 응답 보기</b><br>
+    · <b>표 보기</b>: JSON 응답을 엑셀처럼 표로 정리합니다. 제목을 누르면 정렬, 검색, 열 선택, CSV(엑셀) 저장이 됩니다.<br>
+    · 1700000000000 같은 숫자 시간값은 <b>날짜 변환</b>으로 읽기 쉬운 날짜로 바뀝니다. (원래 값은 원문 탭에서 확인)<br>
+    · <b>원문</b>: 서버가 보낸 그대로의 내용입니다. <b>보낸 요청</b>: 서버로 실제 전송된 요청 원문입니다.<br>
+    · 원문·보낸 요청 위쪽 검색창에서 글자를 찾을 수 있습니다. (Enter 다음, Shift+Enter 이전, 결과 영역에서 Ctrl+F)<br>
+    · <b>⛶ 크게 보기</b>: 결과 영역을 화면 가득 띄웁니다. Esc 또는 바깥쪽 클릭으로 닫습니다.<br><br>
+    <b>6. 문제가 생기면</b><br>
+    · <b>curl 복사</b>를 눌러 개발 담당자에게 붙여넣어 전달하면 같은 요청을 바로 재현할 수 있습니다.<br>
+    · 브라우저 탭을 닫았으면 프로그램을 다시 실행하면 화면만 다시 열립니다. (중복 실행되지 않음)<br>
+    · 종료는 상단 <b>종료</b> 버튼.<br>
+    · <b>Windows</b>: 창 없이 화면 오른쪽 아래 <b>알림 영역(트레이)</b> 아이콘으로 실행 — 아이콘 클릭: 화면 열기, 오른쪽 클릭: 종료<br>
+    · <b>Mac / Linux</b>: 터미널에서 실행했다면 Ctrl+C 로도 종료됩니다.<br>
+    · 저장 위치: <code id="dataPath">-</code>
+  </div>
+  <div class="foot"><button class="btn pri" id="helpClose">닫기</button></div>
+</div></div>
+
+<div class="res-pop" id="resPop"><div class="res-pop-head" id="resPopHead"></div><div class="res-pop-in" id="resPopIn"></div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let store = { saved: [], history: [], envs: [{ name: "기본", vars: [["baseUrl", "", true]] }], envIdx: 0 };
+let currentId = null;   // 선택된 저장 요청 id
+let histSel = null;     // 선택된 최근 기록 id   // 현재 열려있는 저장 요청 id
+let lastRes = null, lastSent = null;
+let sideTab = "saved";
+
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("on"),1800); }
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+/* ---------- 저장소 ---------- */
+let saveTimer=null;
+function persist(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{
+  fetch("/api/store",{method:"POST",body:JSON.stringify(store)}).catch(()=>toast("저장 실패 - 프로그램 창이 닫혔는지 확인하세요"));
+},300); }
+async function load(){
+  try{ const d = await (await fetch("/api/store")).json();
+    if (d && d.saved) store = Object.assign(store, d);
+  }catch(e){}
+  if(!store.envs || !store.envs.length) store.envs=[{name:"기본",vars:[]}];
+  if(store.envIdx==null || store.envIdx>=store.envs.length) store.envIdx=0;
+  // 이전 버전에서 중복으로 들어간 저장 요청 정리 (폴더·이름·방식·주소·본문이 모두 같은 것)
+  const seen=new Set(), before=store.saved.length;
+  store.saved=store.saved.filter(s=>{ const k=JSON.stringify([s.folder||"",s.name,s.method,s.url,s.bodyType,s.body,s.form]); if(seen.has(k)) return false; seen.add(k); return true; });
+  if(store.saved.length<before){ persist(); setTimeout(()=>toast(`중복된 저장 요청 ${before-store.saved.length}개를 정리했습니다`),400); }
+}
+
+/* ---------- 키/값 테이블 ---------- */
+function kvTable(tbl, rows, onChange, ph){
+  ph = ph || ["이름","값"];
+  tbl._rows = rows.map(r=>[r[0]||"", r[1]||"", r[2]!==false]);
+  const render=()=>{
+    const rs = tbl._rows;
+    if(!rs.length || rs[rs.length-1][0] || rs[rs.length-1][1]) rs.push(["","",true]);
+    tbl.innerHTML = rs.map((r,i)=>`<tr data-i="${i}">
+      <td class="c"><input type="checkbox" ${r[2]?"checked":""} data-f="2"></td>
+      <td><input type="text" value="${esc(r[0])}" placeholder="${ph[0]}" data-f="0" spellcheck="false"></td>
+      <td><input type="text" value="${esc(r[1])}" placeholder="${ph[1]}" data-f="1" spellcheck="false"></td>
+      <td class="d">${i<rs.length-1?'<button class="del" title="삭제">×</button>':''}</td></tr>`).join("");
+  };
+  tbl.oninput = e=>{
+    const tr=e.target.closest("tr"); if(!tr) return; const i=+tr.dataset.i, f=+e.target.dataset.f;
+    tbl._rows[i][f] = f===2 ? e.target.checked : e.target.value;
+    const last = i===tbl._rows.length-1;
+    if(last && (tbl._rows[i][0]||tbl._rows[i][1])){
+      tbl._rows.push(["","",true]);
+      const pos=e.target.selectionStart; render();
+      const inp=tbl.querySelector(`tr[data-i="${i}"] input[data-f="${f}"]`); if(inp){inp.focus(); if(f!==2) inp.setSelectionRange(pos,pos);}
+    }
+    onChange && onChange();
+  };
+  tbl.onchange = tbl.oninput;
+  tbl.onclick = e=>{ if(e.target.classList.contains("del")){ tbl._rows.splice(+e.target.closest("tr").dataset.i,1); render(); onChange&&onChange(); } };
+  tbl._render = render; render();
+}
+const kvGet = tbl => (tbl._rows||[]).filter(r=>r[0]||r[1]);
+const kvActive = tbl => kvGet(tbl).filter(r=>r[2] && r[0]);
+
+/* ---------- 파라미터 <-> URL 동기화 ---------- */
+let syncing=false;
+function urlToParams(){
+  if(syncing) return; const u=$("url").value; const q=u.indexOf("?");
+  const rows=[];
+  if(q>=0) u.slice(q+1).split("&").forEach(p=>{ if(!p) return; const e=p.indexOf("="); const k=e<0?p:p.slice(0,e), v=e<0?"":p.slice(e+1);
+    let dk=k,dv=v; try{dk=decodeURIComponent(k.replace(/\+/g," "))}catch(_){}; try{dv=decodeURIComponent(v.replace(/\+/g," "))}catch(_){}; rows.push([dk,dv,true]); });
+  const disabled = kvGet($("paramsT")).filter(r=>!r[2]);
+  kvTable($("paramsT"), rows.concat(disabled), paramsToUrl); counts();
+}
+function encPart(s){ return /\{\{.*\}\}/.test(s) ? s : encodeURIComponent(s); }
+function paramsToUrl(){
+  syncing=true; let u=$("url").value; const q=u.indexOf("?"); if(q>=0) u=u.slice(0,q);
+  const ps=kvActive($("paramsT")).map(r=>encPart(r[0])+(r[1]!==""?"="+encPart(r[1]):"")).join("&");
+  $("url").value = ps? u+"?"+ps : u; syncing=false; counts();
+}
+function counts(){
+  const p=kvActive($("paramsT")).length, h=kvActive($("headersT")).length;
+  $("cParams").textContent=p||""; $("cParams").style.display=p?"":"none";
+  $("cHeaders").textContent=h||""; $("cHeaders").style.display=h?"":"none";
+}
+
+/* ---------- 탭 ---------- */
+function tabs(barId){
+  $(barId).addEventListener("click",e=>{ const b=e.target.closest("button[data-p]"); if(!b) return;
+    $(barId).querySelectorAll("button[data-p]").forEach(x=>x.classList.toggle("on",x===b));
+    const card=$(barId).parentElement; card.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on",p.id==="p-"+b.dataset.p)); });
+}
+function bodyType(){ return document.querySelector('input[name=bt]:checked').value; }
+function setBodyType(t){ document.querySelector(`input[name=bt][value="${t}"]`).checked=true; showBody(); }
+function showBody(){ const t=bodyType(); $("bodyRaw").style.display=(t==="json"||t==="text")?"":"none"; $("bodyForm").style.display=t==="form"?"":"none"; $("bodyNone").style.display=t==="none"?"":"none"; $("fmtBtn").style.display=t==="json"?"":"none"; }
+function showAuth(){ const t=$("authType").value; $("authBearer").style.display=t==="bearer"?"":"none"; $("authBasic").style.display=t==="basic"?"":"none"; $("authKey").style.display=t==="apikey"?"":"none"; }
+
+/* ---------- 요청 상태 수집/복원 ---------- */
+function collect(){
+  return { method:$("method").value, url:$("url").value.trim(),
+    params:kvGet($("paramsT")), headers:kvGet($("headersT")),
+    bodyType:bodyType(), body:$("bodyText").value, form:kvGet($("formT")),
+    auth:{ type:$("authType").value, token:$("authToken").value, user:$("authUser").value, pass:$("authPass").value, keyName:$("authKeyName").value, keyVal:$("authKeyVal").value, keyIn:$("authKeyIn").value },
+    insecure:$("optInsecure").checked, timeout:+$("optTimeout").value||30, keepCookie:$("optCookie").checked };
+}
+function apply(r){
+  r=r||{}; $("method").value=r.method||"GET"; $("url").value=r.url||""; colorMethod();
+  kvTable($("paramsT"), r.params||[], paramsToUrl); if(!r.params) urlToParams();
+  kvTable($("headersT"), r.headers||[], counts, ["헤더 이름","값"]);
+  setBodyType(r.bodyType||"none"); $("bodyText").value=r.body||"";
+  kvTable($("formT"), r.form||[]);
+  const a=r.auth||{}; $("authType").value=a.type||"none"; $("authToken").value=a.token||""; $("authUser").value=a.user||""; $("authPass").value=a.pass||""; $("authKeyName").value=a.keyName||""; $("authKeyVal").value=a.keyVal||""; $("authKeyIn").value=a.keyIn||(a.keyName?"header":"query"); showAuth();
+  $("optInsecure").checked=!!r.insecure; $("optTimeout").value=r.timeout||30; $("optCookie").checked=r.keepCookie!==false; counts();
+}
+function colorMethod(){ const s=$("method"); s.className="m-"+s.value; s.style.color=getComputedStyle(s).color; }
+
+/* ---------- 변수 치환 ---------- */
+function vars(){ const m={}; (store.envs[store.envIdx]?.vars||[]).forEach(v=>{ if(v[0] && v[2]!==false) m[v[0].trim()]=v[1]; }); return m; }
+function sub(s){ const m=vars(); return String(s||"").replace(/\{\{\s*([^}]+?)\s*\}\}/g,(a,k)=> k in m ? m[k] : a); }
+
+function build(r){
+  const headers = r.headers.filter(h=>h[2]!==false && h[0]).map(h=>[sub(h[0]),sub(h[1])]);
+  const has = n => headers.some(h=>h[0].toLowerCase()===n.toLowerCase());
+  let body="";
+  if(r.method!=="GET" && r.method!=="HEAD"){
+    if(r.bodyType==="json"){ body=sub(r.body); if(!has("Content-Type")) headers.push(["Content-Type","application/json; charset=utf-8"]); }
+    else if(r.bodyType==="text"){ body=sub(r.body); if(!has("Content-Type")) headers.push(["Content-Type", /^\s*</.test(body)?"application/xml; charset=utf-8":"text/plain; charset=utf-8"]); }
+    else if(r.bodyType==="form"){ body=r.form.filter(f=>f[2]!==false && f[0]).map(f=>encodeURIComponent(sub(f[0]))+"="+encodeURIComponent(sub(f[1]))).join("&"); if(!has("Content-Type")) headers.push(["Content-Type","application/x-www-form-urlencoded; charset=utf-8"]); }
+  }
+  const a=r.auth;
+  if(a.type==="bearer" && a.token) headers.push(["Authorization","Bearer "+sub(a.token)]);
+  if(a.type==="basic") headers.push(["Authorization","Basic "+btoa(unescape(encodeURIComponent(sub(a.user)+":"+sub(a.pass))))]);
+  let url=sub(r.url);
+  if(a.type==="apikey" && a.keyVal){
+    const name=sub(a.keyName||"apiKey");
+    if((a.keyIn||"query")==="query"){
+      const re=new RegExp("([?&])"+name.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"=","i");
+      if(!re.test(url)) url += (url.includes("?")?"&":"?")+encodeURIComponent(name)+"="+encodeURIComponent(sub(a.keyVal));
+    } else headers.push([name,sub(a.keyVal)]);
+  }
+  if(!has("Accept")) headers.push(["Accept","application/json, text/plain, */*"]);
+  return { method:r.method, url, headers, body, insecure:r.insecure, timeout:r.timeout, keepCookie:r.keepCookie!==false };
+}
+
+/* ---------- 보내기 ---------- */
+async function send(){
+  const r=collect();
+  if(!r.url){ toast("주소를 입력하세요"); $("url").focus(); return; }
+  const left = (sub(r.url).match(/\{\{\s*([^}]+?)\s*\}\}/)||[])[1];
+  if(left){ toast(`변수 '${left}' 값이 없습니다. 변수 관리에서 등록하세요`); return; }
+  if(r.bodyType==="json" && r.body.trim() && r.method!=="GET"){
+    try{ JSON.parse(sub(r.body)); }catch(e){ if(!confirm("본문이 올바른 JSON 형식이 아닙니다.\n("+e.message+")\n\n그래도 보낼까요?")) return; }
+  }
+  const req=build(r); lastSent=req;
+  const path=req.url.replace(/^https?:\/\/[^/]+/i,"").split("?")[0];
+  const warn=[];
+  if(/\/\//.test(path)) warn.push("· 주소에 슬래시(//)가 두 번 연속 들어 있습니다.");
+  if(/[\\]/.test(path)) warn.push("· 주소에 역슬래시(\\)가 들어 있습니다.");
+  if(/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(path)) warn.push("· 주소 경로에 한글이 들어 있습니다. (한/영 전환 실수 확인)");
+  if(/\s/.test(req.url.trim())) warn.push("· 주소에 공백이 들어 있습니다.");
+  if(/[?&](password|passwd|pw|newPw|oldPw)=/i.test(req.url)) warn.push("· 비밀번호가 주소(?password=…)에 들어 있습니다. 주소는 서버 로그·기록에 그대로 남고,\n   대부분의 API는 비밀번호를 본문(Body)의 '폼' 형식으로 받습니다.");
+  if(warn.length && !confirm("주소를 확인해 주세요.\n\n"+warn.join("\n")+"\n\n그래도 보낼까요?")) return;
+  const btn=$("sendBtn"); btn.disabled=true; btn.innerHTML='<span class="spin"></span>전송 중';
+  $("status").innerHTML=""; $("p-rbody").innerHTML=$("p-rtable").innerHTML='<div class="placeholder">응답 기다리는 중…</div>';
+  let res;
+  try{ res = await (await fetch("/api/send",{method:"POST",body:JSON.stringify(req)})).json(); }
+  catch(e){ res={error:"프로그램과 연결이 끊어졌습니다. (종료되었을 수 있습니다)\nRestTester.exe를 다시 실행한 뒤 이 화면을 새로고침(F5) 하세요."}; }
+  btn.disabled=false; btn.textContent="보내기";
+  lastRes=res; showRes(res);
+  const htmlRes = res.ok && !res.binary && /<html[\s>]/i.test(res.body||"") && !/^\s*[\[{]/.test(res.body||"");
+  histSel=null;   // 새로 보낸 요청 = 새 내용 → 최근 기록 선택 해제
+  store.history.unshift(Object.assign(collect(),{id:uid(),at:Date.now(),
+    status:res.ok?res.status:"오류", htmlRes, sentUrl:req.url,
+    res: res.binary ? Object.assign({},res,{bodyB64:""}) : Object.assign({},res)}));
+  store.history=store.history.slice(0,100);
+  // 최근 10건은 응답 전체(최대 1MB)를 남겨 표 보기가 되게 하고, 그 이전 기록은 앞부분만 남김
+  store.history.forEach((h,i)=>{ if(h.res && h.res.body){ const cap=i<10?1048576:20000; if(h.res.body.length>cap) h.res.body=h.res.body.slice(0,cap); } });
+  persist(); if(sideTab==="hist") side();
+}
+
+function fmtSize(n){ return n<1024? n+" B" : n<1048576? (n/1024).toFixed(1)+" KB" : (n/1048576).toFixed(2)+" MB"; }
+function hlJSON(obj){
+  return esc(JSON.stringify(obj,null,2)).replace(/(&quot;(?:\\.|[^&\\]|&(?!quot;))*?&quot;)(\s*:)?|\b(true|false)\b|\bnull\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/g,
+    (m,str,colon,bool)=> str ? (colon? `<span class="j-k">${str}</span>${colon}` : `<span class="j-s">${str}</span>`) : bool ? `<span class="j-b">${m}</span>` : m==="null"? `<span class="j-z">${m}</span>` : `<span class="j-n">${m}</span>`);
+}
+
+/* ---------- 표 보기 ---------- */
+const tv={root:null,path:[],q:"",sortCol:null,sortDir:1,dateConv:true,hideEmpty:true,raw:false};
+let prefResTab="rtable";
+function selectResTab(name){
+  const cur=$("resTabs").querySelector("button.on");
+  if(cur && (cur.dataset.p==="rreq"||cur.dataset.p==="rheaders")) return;   // 보낸 요청/헤더를 보고 있으면 그대로 둠
+  $("resTabs").querySelectorAll("button[data-p]").forEach(x=>x.classList.toggle("on",x.dataset.p===name));
+  $("resTabs").parentElement.querySelectorAll(".pane").forEach(p=>p.classList.toggle("on",p.id==="p-"+name));
+}
+$("resTabs").addEventListener("click",e=>{ const b=e.target.closest("button[data-p]"); if(b && (b.dataset.p==="rtable"||b.dataset.p==="rbody")) prefResTab=b.dataset.p; });
+const isObj=v=>v!==null && typeof v==="object";
+function nodeAt(path){ let n=tv.root; for(const k of path){ if(!isObj(n)) return undefined; n=n[k]; } return n; }
+function findArrays(n,path,out,depth){
+  if(depth>5||!isObj(n)) return;
+  if(Array.isArray(n)){ if(n.length && n.some(isObj)) out.push({path,len:n.length}); if(n.length && isObj(n[0])) findArrays(n[0],path.concat(0),out,depth+1); return; }
+  for(const k of Object.keys(n)) findArrays(n[k],path.concat(k),out,depth+1);
+}
+const pad=n=>String(n).padStart(2,"0");
+function fmtDate(ms){ const d=new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
+function cellText(v,key){
+  if(v===undefined) return "";
+  if(v===null) return "null";
+  if(typeof v==="number" && tv.dateConv && Number.isInteger(v)){
+    if(v>=946684800000 && v<4102444800000) return fmtDate(v);                       // 13자리 ms (2000~2100년)
+    if(v>=946684800 && v<4102444800 && /(time|date|last|created|updated|at|_dt|_tm)$/i.test(key||"")) return fmtDate(v*1000);
+  }
+  if(Array.isArray(v)) return v.length && !v.some(isObj) ? v.join(", ") : `[목록 ${v.length}건]`;
+  if(isObj(v)) return `{항목 ${Object.keys(v).length}개}`;
+  return String(v);
+}
+function cellCls(v){ if(v===null||v===undefined) return "nul"; if(isObj(v) && !(Array.isArray(v) && !v.some(isObj))) return "obj"; if(typeof v==="number") return "num"; return ""; }
+const isEmpty=v=>v===undefined||v===null||v===""||(Array.isArray(v)&&!v.length);
+function pathLabel(path){ return path.length? path.map(k=>typeof k==="number"?`[${k+1}번째]`:k).join(" › ") : "(전체)"; }
+
+function renderTable(res){
+  const box=$("p-rtable");
+  tv.root=null;
+  if(!res || !res.ok || res.binary || !res.body){ box.innerHTML='<div class="placeholder">표로 볼 응답이 없습니다. <b>원문</b> 탭을 확인하세요.</div>'; selectResTab("rbody"); return; }
+  try{ tv.root=JSON.parse(res.body); }
+  catch(e){
+    const cut = res.size>(res.body||"").length;
+    box.innerHTML=`<div class="placeholder">${cut?"기록에는 응답 앞부분만 저장돼 있어 표로 볼 수 없습니다.<br>같은 요청을 다시 <b>보내기</b> 하면 표로 볼 수 있습니다.":"JSON 응답일 때만 표로 볼 수 있습니다. <b>원문</b> 탭을 확인하세요."}</div>`;
+    selectResTab("rbody"); return;
+  }
+  if(!isObj(tv.root)){ box.innerHTML=`<div class="placeholder">값 하나만 응답으로 왔습니다: <b>${esc(String(tv.root))}</b></div>`; selectResTab(prefResTab); return; }
+  const arrs=[]; findArrays(tv.root,[],arrs,0);
+  tv.arrays=arrs.filter(a=>!a.path.some(k=>typeof k==="number"));   // 최상위 경로의 목록만 선택지로
+  const best=tv.arrays.slice().sort((a,b)=>b.len-a.len)[0];
+  tv.path = Array.isArray(tv.root) ? [] : (best ? best.path : []);
+  tv.q=""; tv.sortCol=null; tv.sortDir=1;
+  drawTable(); selectResTab(prefResTab);
+}
+
+function drawTable(){
+  const box=$("p-rtable"); const node=nodeAt(tv.path);
+  const isList=Array.isArray(node);
+  let cols, rows;
+  if(isList){
+    rows=node.map((r,i)=>({i,v: isObj(r)&&!Array.isArray(r) ? r : {"값":r}}));
+    const seen=new Set(); cols=[];
+    rows.slice(0,1000).forEach(r=>Object.keys(r.v).forEach(k=>{ if(!seen.has(k)){ seen.add(k); cols.push(k);} }));
+  } else {
+    cols=["항목","값"];
+    rows=Object.keys(node||{}).map((k,i)=>({i,v:{"항목":k,"값":node[k]},key:k}));
+  }
+  const sig=(isList?"L:":"O:")+cols.slice(0,30).join("|");
+  store.tvHidden=store.tvHidden||{};
+  const hidden=new Set(store.tvHidden[sig]||[]);
+  let shown=cols.filter(c=>!hidden.has(c));
+  if(isList && tv.hideEmpty) shown=shown.filter(c=>rows.some(r=>!isEmpty(r.v[c])));
+  const txt=(r,c)=>cellText(r.v[c], isList?c:r.key);
+  let view=rows;
+  if(tv.q){ const q=tv.q.toLowerCase(); view=view.filter(r=>shown.some(c=>txt(r,c).toLowerCase().includes(q))); }
+  if(tv.sortCol && shown.includes(tv.sortCol)){
+    const c=tv.sortCol, d=tv.sortDir;
+    view=view.slice().sort((a,b)=>{ const x=a.v[c], y=b.v[c];
+      if(typeof x==="number" && typeof y==="number") return (x-y)*d;
+      return txt(a,c).localeCompare(txt(b,c),"ko",{numeric:true})*d; });
+  }
+  tv.cur={shown,view,txt,isList,cols,sig};
+  const LIMIT=1000;
+  const crumbs=[`<a data-go="0">전체</a>`].concat(tv.path.map((k,i)=>`<a data-go="${i+1}">${esc(typeof k==="number"?(k+1)+"번째":k)}</a>`)).join(" › ");
+  const opts=(tv.arrays||[]).map(a=>`<option value='${esc(JSON.stringify(a.path))}' ${JSON.stringify(a.path)===JSON.stringify(tv.path)?"selected":""}>${esc(pathLabel(a.path))} (${a.len}건)</option>`).join("");
+  box.innerHTML=`
+   <div class="tv-bar">
+     ${opts && (tv.arrays.length>1 || tv.path.length) ? `<span>데이터</span><select id="tvSel">${JSON.stringify(tv.path)==="[]"&&!Array.isArray(tv.root)?'<option value="[]" selected>(전체 구조)</option>':'<option value="[]">(전체 구조)</option>'}${opts}</select>`:""}
+     <input type="search" id="tvQ" placeholder="표 안에서 검색" value="${esc(tv.q)}">
+     <label><input type="checkbox" id="tvDate" ${tv.dateConv?"checked":""}> 날짜 변환</label>
+     ${isList?`<label><input type="checkbox" id="tvEmpty" ${tv.hideEmpty?"checked":""}> 빈 열 숨기기</label>`:""}
+     ${isList?`<button class="btn sm" id="tvCols">열 선택 (${shown.length}/${cols.length})</button>`:""}
+     <button class="btn sm" id="tvCsv">엑셀(CSV) 저장</button>
+     <span class="tv-cnt">${isList?`${view.length}건${view.length!==rows.length?` / 전체 ${rows.length}건`:""}`:`항목 ${view.length}개`}</span>
+   </div>
+   ${tv.path.length?`<div class="crumb">위치: ${crumbs}</div>`:""}
+   <div class="tv-wrap"><table class="grid ${isList?"":"kvgrid"}">
+     <thead><tr>${isList?'<th class="rn">#</th>':""}${shown.map(c=>`<th data-c="${esc(c)}" title="${esc(c)} — 눌러서 정렬">${esc(c)}${tv.sortCol===c?(tv.sortDir>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead>
+     <tbody>${view.slice(0,LIMIT).map(r=>`<tr data-i="${r.i}">${isList?`<td class="rn">${r.i+1}</td>`:""}${shown.map(c=>{const v=r.v[c]; const t=txt(r,c); return `<td class="${cellCls(v)}" data-c="${esc(c)}" title="${esc(t.length>40||cellCls(v)==="obj"?t+(cellCls(v)==="obj"?" (눌러서 열기)":""):"")}">${esc(t)}</td>`;}).join("")}</tr>`).join("")}</tbody>
+   </table></div>
+   ${view.length>LIMIT?`<div class="hint">화면에는 ${LIMIT}건까지만 표시합니다. 전체는 <b>엑셀(CSV) 저장</b>으로 받으세요.</div>`:""}
+   <div class="hint">셀을 누르면 값이 복사되고, <span style="color:#8250df">보라색</span> 셀은 눌러서 안쪽 내용을 펼쳐 볼 수 있습니다.</div>`;
+  const q=$("tvQ"); q.oninput=()=>{ tv.q=q.value; const pos=q.selectionStart; drawTable(); const n=$("tvQ"); n.focus(); n.setSelectionRange(pos,pos); };
+  $("tvDate").onchange=e=>{ tv.dateConv=e.target.checked; drawTable(); };
+  if($("tvEmpty")) $("tvEmpty").onchange=e=>{ tv.hideEmpty=e.target.checked; drawTable(); };
+  if($("tvSel")) $("tvSel").onchange=e=>{ tv.path=JSON.parse(e.target.value); tv.sortCol=null; tv.q=""; drawTable(); };
+  if($("tvCols")) $("tvCols").onclick=e=>colPicker(e.target);
+  $("tvCsv").onclick=csvExport;
+  box.querySelectorAll(".crumb a").forEach(a=>a.onclick=()=>{ tv.path=tv.path.slice(0,+a.dataset.go); tv.sortCol=null; tv.q=""; drawTable(); });
+  box.querySelector("thead").onclick=e=>{ const th=e.target.closest("th[data-c]"); if(!th) return; const c=th.dataset.c;
+    if(tv.sortCol===c){ if(tv.sortDir>0) tv.sortDir=-1; else tv.sortCol=null; } else { tv.sortCol=c; tv.sortDir=1; } drawTable(); };
+  box.querySelector("tbody").onclick=e=>{ const td=e.target.closest("td[data-c]"); if(!td) return;
+    const i=+td.parentElement.dataset.i, c=td.dataset.c; const r=rows.find(x=>x.i===i); const v=r.v[c];
+    if(td.classList.contains("obj")){ tv.path = isList ? tv.path.concat(i, isObj(node[i])&&!Array.isArray(node[i])?[c]:[]) : tv.path.concat(r.key); tv.sortCol=null; tv.q=""; drawTable(); return; }
+    copy(isObj(v)?JSON.stringify(v):(v==null?"":String(v)), "값을 복사했습니다"); };
+}
+function colPicker(btn){
+  document.querySelectorAll(".colpop").forEach(p=>p.remove());
+  const {cols,sig}=tv.cur; const hidden=new Set(store.tvHidden[sig]||[]);
+  const pop=document.createElement("div"); pop.className="colpop";
+  const rc=btn.getBoundingClientRect(); pop.style.left=Math.min(rc.left,innerWidth-260)+"px"; pop.style.top=(rc.bottom+4)+"px";
+  pop.innerHTML=`<div style="display:flex;gap:6px;margin-bottom:6px"><button class="btn sm" data-a="all">전체 선택</button><button class="btn sm" data-a="none">전체 해제</button><span style="flex:1"></span><button class="btn sm" data-a="close">닫기</button></div>`+
+    cols.map(c=>`<label><input type="checkbox" value="${esc(c)}" ${hidden.has(c)?"":"checked"}> ${esc(c)}</label>`).join("");
+  document.body.appendChild(pop);
+  const save=()=>{ store.tvHidden[sig]=[...pop.querySelectorAll("input")].filter(x=>!x.checked).map(x=>x.value); persist(); drawTable(); };
+  pop.onchange=save;
+  pop.onclick=e=>{ const a=e.target.dataset.a; if(!a) return;
+    if(a==="close"){ pop.remove(); return; }
+    pop.querySelectorAll("input").forEach(x=>x.checked=(a==="all")); save(); };
+  setTimeout(()=>document.addEventListener("mousedown",function h(ev){ if(!pop.contains(ev.target)&&ev.target!==btn){ pop.remove(); document.removeEventListener("mousedown",h);} }),0);
+}
+function csvExport(){
+  const {shown,view,txt,isList}=tv.cur;
+  const q=s=>{ s=String(s); return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const lines=[shown.map(q).join(",")].concat(view.map(r=>shown.map(c=>{ const v=r.v[c]; return q(isObj(v)&&cellCls(v)==="obj"?JSON.stringify(v):txt(r,c)); }).join(",")));
+  const blob=new Blob(["﻿"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
+  let name=(sub($("url").value).replace(/^https?:\/\/[^/]+/i,"").split("?")[0].split("/").filter(Boolean).slice(-2).join("_")||"response");
+  const d=new Date(); name+=`_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.csv`;
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name.replace(/[\\/:*?"<>|]/g,"_"); a.click();
+  toast(`${view.length}건을 CSV로 저장했습니다`);
+}
+
+function showReq(res){
+  const box=$("p-rreq");
+  if(!res || !res.rawRequest){ box.innerHTML='<div class="placeholder">보낸 요청 원문이 없습니다.<br>(서버에 연결하기 전에 실패했거나, 이전 버전에서 보낸 기록)</div>'; return; }
+  box.innerHTML=`<div class="tv-bar"><span class="hint" style="margin:0">프로그램이 서버로 실제 전송한 내용입니다. (자동으로 붙은 헤더·쿠키 포함)</span><span style="flex:1"></span>${res.sentAt?`<span class="hint" style="margin:0">발송 ${fmtTs(res.sentAt)}</span>`:""}<button class="btn sm" id="copyReq">원문 복사</button></div><pre class="out" style="background:#f6f8fa;border:1px solid var(--line);border-radius:8px;padding:12px">${esc(res.rawRequest.replace(/\r\n/g,"\n"))}</pre>`;
+  $("copyReq").onclick=()=>copy(res.rawRequest.replace(/\r\n/g,"\n"),"보낸 요청 원문을 복사했습니다");
+}
+/* ---------- 원문 / 보낸 요청 검색 ---------- */
+const srch={};
+const hlOK = typeof CSS!=="undefined" && CSS.highlights && typeof Highlight!=="undefined";
+function findIn(pane,st){
+  st.ranges=[];
+  if(hlOK){ CSS.highlights.delete("rt-"+pane.id); CSS.highlights.delete("rt-cur"); }
+  const q=(st.q||"").toLowerCase(); if(!q) return;
+  pane.querySelectorAll("pre.out").forEach(pre=>{
+    const nodes=[], walk=document.createTreeWalker(pre,NodeFilter.SHOW_TEXT); let full="";
+    while(walk.nextNode()){ nodes.push({n:walk.currentNode,at:full.length}); full+=walk.currentNode.nodeValue; }
+    const low=full.toLowerCase(); let i=0, k=0;
+    const locate=pos=>{ while(k<nodes.length-1 && nodes[k+1].at<=pos) k++; return nodes[k]; };
+    while((i=low.indexOf(q,i))>=0 && st.ranges.length<5000){
+      k=0; const a=locate(i); const b=locate(i+q.length-1);
+      const r=document.createRange(); r.setStart(a.n,i-a.at); r.setEnd(b.n,i+q.length-b.at);
+      st.ranges.push(r); i+=q.length;
+    }
+  });
+  if(hlOK && st.ranges.length) CSS.highlights.set("rt-"+pane.id,new Highlight(...st.ranges));
+}
+function addSearch(paneId){
+  const pane=$(paneId); if(!pane.querySelector("pre.out")) return;
+  const st=srch[paneId]||(srch[paneId]={q:"",idx:0,ranges:[]});
+  const bar=document.createElement("div"); bar.className="sbar";
+  bar.innerHTML=`<input type="search" placeholder="${paneId==="p-rreq"?"보낸 요청":"원문"}에서 검색  (Enter 다음 · Shift+Enter 이전)" value="${esc(st.q)}"><span class="scnt"></span><button class="btn sm" data-d="-1" title="이전 (Shift+Enter)">▲</button><button class="btn sm" data-d="1" title="다음 (Enter)">▼</button>`;
+  pane.prepend(bar);
+  const inp=bar.querySelector("input"), cnt=bar.querySelector(".scnt");
+  const go=d=>{
+    const n=st.ranges.length;
+    if(!n){ cnt.textContent=st.q?"0건":""; return; }
+    st.idx=((st.idx+d)%n+n)%n; cnt.textContent=`${st.idx+1} / ${n}`;
+    const r=st.ranges[st.idx];
+    const pre=r.startContainer.parentElement.closest("pre"); if(pre && pre.style.display==="none") pre.style.display="";
+    if(hlOK) CSS.highlights.set("rt-cur",new Highlight(r));
+    const rc=r.getBoundingClientRect(), pc=pane.getBoundingClientRect();
+    pane.scrollTop += rc.top - pc.top - pc.height/2;
+  };
+  const run=keep=>{ st.q=inp.value; findIn(pane,st); if(!keep) st.idx=0; go(0); };
+  inp.oninput=()=>run(false);
+  inp.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); go(e.shiftKey?-1:1); } else if(e.key==="Escape" && inp.value){ e.stopPropagation(); inp.value=""; run(false); } };
+  bar.onclick=e=>{ const d=e.target.dataset && e.target.dataset.d; if(d) go(+d); };
+  if(st.q) run(true);
+}
+function focusSearch(){
+  const cur=$("resTabs").querySelector("button.on"); if(!cur) return false;
+  const pane=$("p-"+cur.dataset.p); const inp=pane && pane.querySelector(".sbar input");
+  if(!inp) return false; inp.focus(); inp.select(); return true;
+}
+
+/* ---------- 결과 영역 크게 보기 ---------- */
+const resCard=document.querySelector(".card.res"), resHome=document.createComment("res-home");
+resCard.before(resHome);
+function popRes(open){
+  if(open){
+    const r=collect(); $("resPopHead").textContent = r.url ? `${r.method}  ${sub(r.url)}` : "";
+    $("resPopIn").appendChild(resCard); $("resPop").classList.add("on"); $("popBtn").textContent="✕ 닫기 (Esc)";
+  } else { resHome.after(resCard); $("resPop").classList.remove("on"); $("popBtn").textContent="⛶ 크게 보기"; }
+}
+const popOpen=()=>$("resPop").classList.contains("on");
+$("popBtn").onclick=()=>popRes(!popOpen());
+$("resPop").addEventListener("mousedown",e=>{ if(e.target===$("resPop")) popRes(false); });
+
+function showRes(res){ showResRaw(res); renderTable(res); showReq(res); addSearch("p-rbody"); addSearch("p-rreq");
+  if(popOpen()){ const r=collect(); $("resPopHead").textContent = r.url ? `${r.method}  ${sub(r.url)}` : ""; } }
+function fmtTs(ms){ if(!ms) return ""; const d=new Date(ms); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3,"0")}`; }
+function tsHtml(res){ return res.sentAt ? `<span class="ts">발송 <b>${fmtTs(res.sentAt)}</b></span><span class="ts">수신 <b>${fmtTs(res.recvAt)}</b></span>` : ""; }
+function showResRaw(res){
+  const rb=$("p-rbody"), rh=$("p-rheaders");
+  if(!res.ok){
+    $("status").innerHTML=`<span class="serr"><b>실패</b></span>${tsHtml(res)}${res.timeMs!=null?`<span>시간 <b>${res.timeMs} ms</b></span>`:""}`;
+    rb.innerHTML=`<div class="errbox">${esc(res.error||"알 수 없는 오류")}</div>`; rh.innerHTML=""; $("cRh").style.display="none"; return;
+  }
+  const c=String(res.status)[0];
+  const htmlBody = !res.binary && /<html[\s>]/i.test(res.body||"") && !/^\s*[\[{]/.test(res.body||"");
+  const desc = htmlBody && c==="2" ? "응답은 왔지만 JSON이 아님" : ({2:"성공",3:"이동",4:"요청 오류",5:"서버 오류"}[c]||"");
+  $("status").innerHTML=`<span class="${htmlBody?"s4":"s"+c}"><b>${res.status} ${esc(res.statusText||"")}</b> ${desc}</span>${tsHtml(res)}<span>시간 <b>${res.timeMs} ms</b></span><span>크기 <b>${fmtSize(res.size)}</b></span>`;
+  if(res.binary){
+    const ct=(res.headers.find(h=>h[0].toLowerCase()==="content-type")||[])[1]||"application/octet-stream";
+    rb.innerHTML = res.bodyB64 && ct.startsWith("image/") ? `<img src="data:${esc(ct)};base64,${res.bodyB64}" style="max-width:100%">`
+      : `<div class="placeholder">파일(바이너리) 응답입니다. (${esc(ct)}, ${fmtSize(res.size)})<br>${res.bodyB64?'<button class="btn sm" id="dlBtn">파일로 저장</button>':''}</div>`;
+    const d=$("dlBtn"); if(d) d.onclick=()=>{ const a=document.createElement("a"); a.href=`data:${ct};base64,${res.bodyB64}`; a.download="response"; a.click(); };
+  } else if(!res.body){
+    rb.innerHTML='<div class="placeholder">응답 본문이 비어 있습니다.</div>';
+  } else {
+    let html, isHtml=false;
+    try{ html=hlJSON(JSON.parse(res.body)); }catch(e){ html=esc(res.body); isHtml=/<html[\s>]/i.test(res.body); }
+    if(isHtml){
+      const d=new DOMParser().parseFromString(res.body,"text/html");
+      const txt=(d.body?d.body.innerText:"").replace(/\s+/g," ").trim();
+      rb.innerHTML=`<div class="errbox" style="background:#fffbeb;border-color:#fde68a;color:#78350f;margin-bottom:10px">⚠ JSON이 아니라 <b>웹페이지(HTML)</b>가 응답으로 왔습니다. API 주소·API 키·접근 허용 설정을 확인하세요.${txt?`<br><br>페이지 내용: <b>${esc(txt.slice(0,300))}</b>`:""}</div>
+        <button class="btn sm" id="rawBtn">원본 HTML 보기</button><pre class="out" id="rawPre" style="display:none;margin-top:8px">${html}</pre>`;
+      $("rawBtn").onclick=()=>{ const p=$("rawPre"); p.style.display=p.style.display?"":"none"; };
+    } else rb.innerHTML=`<pre class="out">${html}</pre>`;
+  }
+  const hs=(res.headers||[]).slice().sort((a,b)=>a[0].localeCompare(b[0]));
+  $("cRh").textContent=hs.length; $("cRh").style.display=hs.length?"":"none";
+  rh.innerHTML=`<table class="hd">${hs.map(h=>`<tr><td>${esc(h[0])}</td><td>${esc(h[1])}</td></tr>`).join("")}</table>`;
+}
+
+function copy(text,msg){ (navigator.clipboard? navigator.clipboard.writeText(text) : Promise.reject()).then(()=>toast(msg),()=>{ const t=document.createElement("textarea"); t.value=text; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); toast(msg); }); }
+function curl(){
+  const r=build(collect()); const q=s=>"'"+String(s).replace(/'/g,"'\\''")+"'";
+  let s="curl -X "+r.method+" "+q(/^https?:\/\//i.test(r.url)?r.url:"http://"+r.url);
+  r.headers.forEach(h=>s+=" \\\n  -H "+q(h[0]+": "+h[1]));
+  if(r.body) s+=" \\\n  --data-raw "+q(r.body);
+  if(r.insecure) s+=" \\\n  -k";
+  return s;
+}
+
+/* ---------- 사이드바 ---------- */
+function ago(t){ const s=(Date.now()-t)/1000; if(s<60) return "방금"; if(s<3600) return Math.floor(s/60)+"분 전"; if(s<86400) return Math.floor(s/3600)+"시간 전"; const d=new Date(t); return (d.getMonth()+1)+"/"+d.getDate(); }
+/* 화면의 요청과 저장/기록 항목이 같은 내용인지 비교 (선택 유지·해제 판단용) */
+function normReq(r){
+  const kv=a=>(a||[]).filter(x=>x[0]||x[1]).map(x=>[x[0]||"",x[1]||"",x[2]!==false]);
+  const a=r.auth||{};
+  return JSON.stringify([r.method||"GET",(r.url||"").trim(),kv(r.headers),r.bodyType||"none",
+    (r.bodyType==="json"||r.bodyType==="text")?(r.body||""):"", r.bodyType==="form"?kv(r.form):[],
+    a.type||"none", a.token||"", a.user||"", a.pass||"", a.keyName||"", a.keyVal||"", (a.keyIn||(a.keyName?"header":"query")),
+    !!r.insecure, r.timeout||30, r.keepCookie!==false]);
+}
+const sameReq=(a,b)=>normReq(a)===normReq(b);
+let editTimer=null;
+function onReqEdit(){ clearTimeout(editTimer); editTimer=setTimeout(()=>{
+  const cur=collect();
+  if(histSel){ const h=store.history.find(x=>x.id===histSel); if(!h || !sameReq(cur,h)){ histSel=null; if(sideTab==="hist") side(); } }
+  if(currentId && sideTab==="saved") side();   // ● 수정됨 표시 갱신
+},150); }
+
+function side(){
+  const el=$("slist");
+  if(sideTab==="saved"){
+    if(!store.saved.length){ el.innerHTML='<div class="empty">저장된 요청이 없습니다.<br>요청을 만든 뒤 <b>저장</b>을 눌러보세요.</div>'; return; }
+    const groups={}; store.saved.forEach(s=>{ (groups[s.folder||""]=groups[s.folder||""]||[]).push(s); });
+    el.innerHTML=Object.keys(groups).sort((a,b)=> a===""?1: b===""?-1: a.localeCompare(b)).map(g=>
+      (g?`<div class="folder">📁 ${esc(g)}</div>`:(Object.keys(groups).length>1?'<div class="folder">기타</div>':""))+
+      groups[g].map(s=>{ const sel=currentId===s.id, dirty=sel && !sameReq(collect(),s);
+        return `<div class="sitem${sel?" sel":""}" data-id="${s.id}" title="${esc(s.url)}">
+        <span class="mb m-${s.method}">${s.method}</span><span class="nm">${esc(s.name)}</span>${dirty?'<span class="dirty" title="불러온 뒤 내용이 바뀌었습니다. 저장을 누르면 반영됩니다.">● 수정됨</span>':""}<button class="x" title="삭제">×</button></div>`; }).join("")).join("");
+  } else {
+    if(!store.history.length){ el.innerHTML='<div class="empty">아직 보낸 요청이 없습니다.</div>'; return; }
+    el.innerHTML=`<div style="text-align:right;padding:2px 4px"><button class="btn sm" id="clrHist">기록 지우기</button></div>`+
+      store.history.map(h=>`<div class="sitem${histSel===h.id?" sel":""}" data-id="${h.id}" title="${esc(h.url)}">
+        <span class="mb m-${h.method}">${h.method}</span><span class="nm">${esc(h.url.replace(/^https?:\/\//,""))}</span>
+        <span class="tm ${h.htmlRes?"s4":typeof h.status==="number"?"s"+String(h.status)[0]:"serr"}" title="${h.htmlRes?"JSON이 아닌 웹페이지 응답":""}">${h.status}${h.htmlRes?" ⚠":""}</span><span class="tm">${ago(h.at)}</span></div>`).join("");
+    $("clrHist").onclick=()=>{ if(confirm("최근 기록을 모두 지울까요?")){ store.history=[]; persist(); side(); } };
+  }
+}
+$("slist").addEventListener("click",e=>{
+  const it=e.target.closest(".sitem"); if(!it) return; const id=it.dataset.id;
+  if(sideTab==="saved"){
+    const s=store.saved.find(x=>x.id===id); if(!s) return;
+    if(e.target.classList.contains("x")){ if(confirm(`'${s.name}' 요청을 삭제할까요?`)){ store.saved=store.saved.filter(x=>x.id!==id); if(currentId===id) currentId=null; persist(); side(); } return; }
+    currentId=id; histSel=null; apply(s); side(); toast(`'${s.name}' 불러옴`);
+  } else { const h=store.history.find(x=>x.id===id); if(h){ currentId=null; histSel=id; apply(h); side();
+    if(h.res){ lastRes=h.res; showRes(h.res); } else { lastRes=null; $("status").innerHTML=""; $("p-rtable").innerHTML=""; selectResTab("rbody"); $("p-rbody").innerHTML='<div class="placeholder">이 기록에는 응답 내용이 저장돼 있지 않습니다.<br>(이전 버전에서 보낸 요청)</div>'; } } }
+});
+document.querySelectorAll(".stabs button").forEach(b=>b.onclick=()=>{ sideTab=b.dataset.s; document.querySelectorAll(".stabs button").forEach(x=>x.classList.toggle("on",x===b)); side(); });
+
+/* ---------- 저장 모달 ---------- */
+function openSave(){
+  const r=collect(); if(!r.url){ toast("주소를 먼저 입력하세요"); return; }
+  const cur=store.saved.find(x=>x.id===currentId);
+  $("saveName").value = cur? cur.name : "";
+  $("saveFolder").value = cur? (cur.folder||"") : "";
+  $("folderList").innerHTML=[...new Set(store.saved.map(s=>s.folder).filter(Boolean))].map(f=>`<option value="${esc(f)}">`).join("");
+  $("saveHint").textContent = cur? `'${cur.name}' 요청을 덮어씁니다. 다른 이름으로 남기려면 '새로 저장'을 누르세요.` : "";
+  $("saveAsNew").style.display = cur? "" : "none";
+  $("saveModal").classList.add("on"); setTimeout(()=>$("saveName").focus(),50);
+}
+function doSave(asNew){
+  const name=$("saveName").value.trim(); if(!name){ toast("이름을 입력하세요"); return; }
+  const data=Object.assign(collect(),{name,folder:$("saveFolder").value.trim()});
+  const idx=store.saved.findIndex(x=>x.id===currentId);
+  if(idx>=0 && !asNew){ data.id=currentId; store.saved[idx]=data; }
+  else { data.id=uid(); store.saved.push(data); currentId=data.id; }
+  histSel=null;
+  persist(); $("saveModal").classList.remove("on"); sideTab="saved";
+  document.querySelectorAll(".stabs button").forEach(x=>x.classList.toggle("on",x.dataset.s==="saved")); side(); toast("저장했습니다");
+}
+$("saveOk").onclick=()=>doSave(false); $("saveAsNew").onclick=()=>doSave(true);
+$("saveCancel").onclick=()=>$("saveModal").classList.remove("on");
+$("saveName").onkeydown=$("saveFolder").onkeydown=e=>{ if(e.key==="Enter") doSave(false); };
+
+/* ---------- 환경/변수 ---------- */
+let envEdit=0;
+function envSel(){
+  $("envSel").innerHTML=store.envs.map((e,i)=>`<option value="${i}" ${i===store.envIdx?"selected":""}>${esc(e.name)}</option>`).join("");
+  $("envEditSel").innerHTML=store.envs.map((e,i)=>`<option value="${i}" ${i===envEdit?"selected":""}>${esc(e.name)}</option>`).join("");
+}
+function envTable(){ kvTable($("envT"), store.envs[envEdit].vars||[], ()=>{ store.envs[envEdit].vars=kvGet($("envT")); persist(); }, ["변수 이름 (예: baseUrl)","값 (예: http://10.0.0.10:8080)"]); }
+$("envSel").onchange=e=>{ store.envIdx=+e.target.value; persist(); toast(`환경: ${store.envs[store.envIdx].name}`); };
+$("envBtn").onclick=()=>{ envEdit=store.envIdx; envSel(); envTable(); $("envModal").classList.add("on"); };
+$("envEditSel").onchange=e=>{ envEdit=+e.target.value; envTable(); };
+$("envAdd").onclick=()=>{ const n=prompt("새 환경 이름 (예: 운영, 테스트)"); if(!n) return;
+  const vars=(store.envs[envEdit].vars||[]).map(v=>[v[0],"",v[2]]); store.envs.push({name:n,vars}); envEdit=store.envs.length-1; persist(); envSel(); envTable(); };
+$("envRen").onclick=()=>{ const n=prompt("환경 이름", store.envs[envEdit].name); if(!n) return; store.envs[envEdit].name=n; persist(); envSel(); };
+$("envDel").onclick=()=>{ if(store.envs.length<2){ toast("환경은 최소 1개 필요합니다"); return; }
+  if(!confirm(`'${store.envs[envEdit].name}' 환경을 삭제할까요?`)) return; store.envs.splice(envEdit,1); envEdit=0; if(store.envIdx>=store.envs.length) store.envIdx=0; persist(); envSel(); envTable(); };
+$("envClose").onclick=()=>{ $("envModal").classList.remove("on"); envSel(); };
+
+/* ---------- 내보내기/불러오기 ---------- */
+$("expBtn").onclick=()=>{
+  if(!store.saved.length){ toast("내보낼 저장 요청이 없습니다"); return; }
+  const blob=new Blob([JSON.stringify({type:"RestTester",saved:store.saved,envs:store.envs},null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); const d=new Date();
+  a.download=`RestTester_요청목록_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}.json`; a.click();
+};
+$("impBtn").onclick=()=>$("impFile").click();
+$("impFile").onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return; e.target.value="";
+  try{ const d=JSON.parse(await f.text()); const list=d.saved||[]; if(!Array.isArray(list)) throw 0;
+    let add=0, upd=0;
+    list.forEach(s=>{
+      const i=store.saved.findIndex(x=>(x.folder||"")===(s.folder||"") && x.name===s.name);
+      if(i>=0){ s.id=store.saved[i].id; store.saved[i]=s; upd++; }   // 같은 폴더·같은 이름이면 덮어쓰기
+      else { s.id=uid(); store.saved.push(s); add++; }
+    });
+    let envN=0; (d.envs||[]).forEach(en=>{ if(!store.envs.some(x=>x.name===en.name)){ store.envs.push(en); envN++; } });
+    persist(); envSel(); side();
+    toast(`새 요청 ${add}개${upd?`, 기존 ${upd}개 갱신`:""}${envN?`, 환경 ${envN}개`:""}`);
+  }catch(_){ toast("올바른 파일이 아닙니다"); }
+};
+
+/* ---------- 기타 이벤트 ---------- */
+$("sendBtn").onclick=send;
+$("saveBtn").onclick=openSave;
+$("newBtn").onclick=()=>{ currentId=null; histSel=null; apply({}); side(); $("p-rtable").innerHTML='<div class="placeholder">응답이 오면 여기에 표로 정리해 보여줍니다.</div>'; $("p-rbody").innerHTML='<div class="placeholder"><div class="big">📡</div>새 요청입니다.</div>'; $("status").innerHTML=""; $("url").focus(); };
+$("url").addEventListener("input",urlToParams);
+[document.querySelector(".bar"), document.querySelector(".card.req")].forEach(el=>{ el.addEventListener("input",onReqEdit); el.addEventListener("change",onReqEdit); el.addEventListener("click",e=>{ if(e.target.closest(".del")) onReqEdit(); }); });
+$("url").addEventListener("keydown",e=>{ if(e.key==="Enter") send(); });
+$("method").onchange=colorMethod;
+document.querySelectorAll("input[name=bt]").forEach(r=>r.onchange=()=>{ showBody(); if(bodyType()!=="none" && $("method").value==="GET"){ $("method").value="POST"; colorMethod(); toast("본문을 보내기 위해 방식을 POST로 바꿨습니다"); } });
+$("authType").onchange=showAuth;
+$("fmtBtn").onclick=()=>{ try{ $("bodyText").value=JSON.stringify(JSON.parse($("bodyText").value),null,2); }catch(e){ toast("JSON 형식 오류: "+e.message); } };
+$("bodyText").addEventListener("keydown",e=>{ if(e.key==="Tab"){ e.preventDefault(); const t=e.target,s=t.selectionStart; t.setRangeText("  ",s,t.selectionEnd,"end"); } });
+$("copyRes").onclick=()=>{ if(!lastRes||!lastRes.ok){ toast("복사할 결과가 없습니다"); return; } let b=lastRes.body; try{ b=JSON.stringify(JSON.parse(b),null,2);}catch(_){}; copy(b,"응답 내용을 복사했습니다"); };
+$("copyCurl").onclick=()=>{ if(!$("url").value.trim()){ toast("주소를 먼저 입력하세요"); return; } copy(curl(),"curl 명령을 복사했습니다"); };
+async function cookieInfo(){
+  const u=sub($("url").value.trim()); if(!/^https?:\/\//i.test(u)){ $("cookieInfo").textContent=""; return; }
+  try{ const n=await (await fetch("/api/cookies?url="+encodeURIComponent(u))).json();
+    $("cookieInfo").textContent = n&&n.length ? `현재 보관 중인 쿠키: ${n.join(", ")}` : "보관 중인 쿠키 없음"; }catch(_){}
+}
+$("cookieClr").onclick=async()=>{ await fetch("/api/cookies",{method:"DELETE"}); toast("쿠키(세션)를 초기화했습니다"); cookieInfo(); };
+document.querySelector('#reqTabs button[data-p="opts"]').addEventListener("click",cookieInfo);
+$("quitBtn").onclick=async()=>{
+  if(!confirm("REST API 테스트 도구를 종료할까요?\n(저장된 요청과 기록은 그대로 남습니다)")) return;
+  clearTimeout(saveTimer); try{ await fetch("/api/store",{method:"POST",body:JSON.stringify(store)}); }catch(_){}
+  try{ await fetch("/api/quit",{method:"POST"}); }catch(_){}
+  document.body.innerHTML='<div style="margin:auto;text-align:center;color:#656d76;line-height:2;font-size:15px">🔌 프로그램을 종료했습니다.<br>이 탭은 닫아도 됩니다. 다시 쓰려면 <b>RestTester.exe</b>를 실행하세요.</div>';
+};
+$("helpBtn").onclick=async()=>{ $("helpModal").classList.add("on");
+  try{ const i=await (await fetch("/api/info")).json(); $("dataPath").textContent=i.dataFile; }catch(_){} };
+$("helpClose").onclick=()=>$("helpModal").classList.remove("on");
+document.querySelectorAll(".modal-bg").forEach(m=>m.addEventListener("mousedown",e=>{ if(e.target===m){ m.classList.remove("on"); envSel(); } }));
+document.addEventListener("keydown",e=>{
+  const mod=e.ctrlKey||e.metaKey;
+  if(mod && e.key==="Enter"){ e.preventDefault(); send(); }
+  else if(mod && (e.key==="s"||e.key==="S")){ e.preventDefault(); openSave(); }
+  else if(mod && (e.key==="f"||e.key==="F") && (popOpen() || resCard.contains(document.activeElement))){ if(focusSearch()) e.preventDefault(); }
+  else if(e.key==="Escape"){
+    if(document.querySelector(".modal-bg.on")){ document.querySelectorAll(".modal-bg.on").forEach(m=>m.classList.remove("on")); envSel(); }
+    else if(document.querySelector(".colpop")) document.querySelectorAll(".colpop").forEach(p=>p.remove());
+    else if(popOpen()) popRes(false);
+  }
+});
+tabs("reqTabs"); tabs("resTabs");
+
+(async()=>{ await load(); apply({}); envSel(); side(); $("url").focus(); })();
+</script>
+</body>
+</html>

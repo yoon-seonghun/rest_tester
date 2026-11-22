@@ -1,0 +1,171 @@
+{
+  "type": "RestTester",
+  "envs": [
+    {
+      "name": "Genian NAC",
+      "vars": [
+        [
+          "baseUrl",
+          "https://Genians url/mc2/rest",
+          true
+        ],
+        [
+          "apiKey",
+          "",
+          true
+        ],
+        [
+          "userId",
+          "",
+          true
+        ]
+      ]
+    }
+  ],
+  "saved": [
+    {
+      "name": "사용자 단건 조회 (getUser)",
+      "folder": "Genian NAC",
+      "method": "GET",
+      "url": "{{baseUrl}}/users/{{userId}}?apiKey={{apiKey}}",
+      "params": [
+        [
+          "apiKey",
+          "{{apiKey}}",
+          true
+        ]
+      ],
+      "headers": [
+        [
+          "Accept",
+          "application/json",
+          true
+        ]
+      ],
+      "bodyType": "none",
+      "body": "",
+      "form": [],
+      "auth": {
+        "type": "none"
+      },
+      "insecure": false,
+      "timeout": 30
+    },
+    {
+      "name": "사용자 목록 조회 (getUsers)",
+      "folder": "Genian NAC",
+      "method": "GET",
+      "url": "{{baseUrl}}/users?apiKey={{apiKey}}&page=1&pageSize=20",
+      "params": [
+        [
+          "apiKey",
+          "{{apiKey}}",
+          true
+        ],
+        [
+          "page",
+          "1",
+          true
+        ],
+        [
+          "pageSize",
+          "20",
+          true
+        ]
+      ],
+      "headers": [
+        [
+          "Accept",
+          "application/json",
+          true
+        ]
+      ],
+      "bodyType": "none",
+      "body": "",
+      "form": [],
+      "auth": {
+        "type": "none"
+      },
+      "insecure": false,
+      "timeout": 30
+    },
+    {
+      "name": "로그 조회 (연결 확인용)",
+      "folder": "Genian NAC",
+      "method": "GET",
+      "url": "{{baseUrl}}/logs?apiKey={{apiKey}}&page=1&pageSize=10",
+      "params": [
+        [
+          "apiKey",
+          "{{apiKey}}",
+          true
+        ],
+        [
+          "page",
+          "1",
+          true
+        ],
+        [
+          "pageSize",
+          "10",
+          true
+        ]
+      ],
+      "headers": [
+        [
+          "Accept",
+          "application/json",
+          true
+        ]
+      ],
+      "bodyType": "none",
+      "body": "",
+      "form": [],
+      "auth": {
+        "type": "none"
+      },
+      "insecure": false,
+      "timeout": 30
+    },
+    {
+      "name": "비밀번호 변경 (changePassword)",
+      "folder": "Genian NAC",
+      "method": "PUT",
+      "url": "{{baseUrl}}/users/{{userId}}/password?apiKey={{apiKey}}",
+      "params": [
+        [
+          "apiKey",
+          "{{apiKey}}",
+          true
+        ]
+      ],
+      "headers": [
+        [
+          "Accept",
+          "application/json",
+          true
+        ]
+      ],
+      "bodyType": "form",
+      "body": "",
+      "form": [
+        [
+          "password",
+          "",
+          true
+        ],
+        [
+          "isEncrytion",
+          "true",
+          true
+        ]
+      ],
+      "auth": {
+        "type": "none"
+      },
+      "insecure": false,
+      "timeout": 30,
+      "keepCookie": true
+    }
+  ]
+}
